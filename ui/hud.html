@@ -6,112 +6,103 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; }
 
-    .hud-tag {
+    .tag {
       position: absolute;
-      background: rgba(10, 10, 22, 0.88);
-      border: 1px solid rgba(120, 100, 255, 0.3);
+      background: rgba(0, 0, 0, 0.88);
+      border: 1px solid rgba(120, 100, 255, 0.5);
       border-radius: 6px;
-      padding: 3px 8px;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
-      white-space: nowrap;
+      padding: 4px 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.7);
       pointer-events: none;
-      transition: opacity 0.3s, transform 0.3s;
+      transform: translate(-50%, -100%); /* position above the player */
+      z-index: 9999;
+      transition: left 0.3s, top 0.3s;
     }
 
-    .hud-name {
-      font-size: 9px;
+    .tag-name {
+      font-size: 10px;
       font-weight: 700;
-      color: rgba(255,255,255,0.7);
-      letter-spacing: 0.3px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
     }
 
-    .hud-stats {
+    .tag-type {
       font-size: 8px;
-      color: rgba(255,255,255,0.4);
-      margin-top: 1px;
-    }
-
-    .hud-type {
       font-weight: 800;
-      font-size: 8px;
+      padding: 1px 5px;
+      border-radius: 3px;
     }
 
-    .hud-type.LAG { color: #ff6b6b; }
-    .hud-type.TAG { color: #00b894; }
-    .hud-type.Nit { color: #74b9ff; }
-    .hud-type.Fish { color: #feca57; }
-    .hud-type.Reg { color: #a29bfe; }
-    .hud-type.unknown { color: rgba(255,255,255,0.25); }
+    .tag-type.LAG  { background: #ff6b6b; color: white; }
+    .tag-type.TAG  { background: #00b894; color: white; }
+    .tag-type.Nit  { background: #74b9ff; color: #000; }
+    .tag-type.Fish { background: #feca57; color: #000; }
+    .tag-type.Reg  { background: #a29bfe; color: white; }
+    .tag-type.unk  { background: #555; color: #aaa; }
+
+    .tag-stats {
+      font-size: 9px;
+      color: #ccc;
+      margin-top: 2px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .tag-stats .v { color: #fff; font-weight: 700; }
   </style>
 </head>
 <body>
-  <div id="hudContainer"></div>
+  <div id="hud"></div>
 
   <script>
     const { ipcRenderer } = require('electron');
 
-    // 6-max seat positions as % of screen (tuned for ACR client)
-    // These are approximate - user can adjust
-    const SEAT_POSITIONS_6MAX = [
-      { x: 50, y: 82 },   // seat 1 (hero, bottom center)
-      { x: 15, y: 62 },   // seat 2 (bottom left)
-      { x: 15, y: 25 },   // seat 3 (top left)
-      { x: 50, y: 12 },   // seat 4 (top center)
-      { x: 82, y: 25 },   // seat 5 (top right)
-      { x: 82, y: 62 },   // seat 6 (bottom right)
-    ];
+    function esc(t) { const d = document.createElement('div'); d.textContent = t||''; return d.innerHTML; }
 
-    const SEAT_POSITIONS_9MAX = [
-      { x: 50, y: 85 },   // seat 1 (hero)
-      { x: 20, y: 75 },   // seat 2
-      { x: 8, y: 55 },    // seat 3
-      { x: 12, y: 30 },   // seat 4
-      { x: 30, y: 15 },   // seat 5
-      { x: 50, y: 10 },   // seat 6
-      { x: 70, y: 15 },   // seat 7
-      { x: 88, y: 30 },   // seat 8
-      { x: 85, y: 55 },   // seat 9
-    ];
+    function render(data) {
+      const hud = document.getElementById('hud');
+      hud.innerHTML = '';
 
-    function renderHud(data) {
-      const container = document.getElementById('hudContainer');
-      container.innerHTML = '';
+      if (!data?._playerStats) return;
 
-      if (!data || !data._playerStats || Object.keys(data._playerStats).length === 0) return;
+      const entries = Object.entries(data._playerStats);
+      if (entries.length === 0) return;
 
-      const players = Object.entries(data._playerStats);
-      const seats = players.length <= 6 ? SEAT_POSITIONS_6MAX : SEAT_POSITIONS_9MAX;
+      for (const [name, s] of entries) {
+        if (name === 'Hero' || name === 'Unknown') continue;
+        // Need coordinates from the AI
+        if (s.x == null || s.y == null) continue;
 
-      players.forEach(([name, stats], i) => {
-        if (name === 'Hero' || name === 'Unknown') return;
-        const pos = seats[i % seats.length];
+        const typeClass = s.type === '?' ? 'unk' : s.type;
 
         const tag = document.createElement('div');
-        tag.className = 'hud-tag';
-        tag.style.left = pos.x + '%';
-        tag.style.top = pos.y + '%';
-        tag.style.transform = 'translate(-50%, -50%)';
-
-        const typeClass = stats.type === '?' ? 'unknown' : stats.type;
+        tag.className = 'tag';
+        // Position using % of window (which is fullscreen)
+        tag.style.left = (s.x * 100) + '%';
+        tag.style.top = (s.y * 100) + '%';
 
         tag.innerHTML = `
-          <div class="hud-name">${escapeHtml(name)} <span class="hud-type ${typeClass}">${stats.type}</span></div>
-          <div class="hud-stats">VPIP ${stats.vpip_pct}% / PFR ${stats.pfr_pct}% / AGG ${stats.agg_factor}</div>
+          <div class="tag-name">
+            ${esc(name)}
+            <span class="tag-type ${typeClass}">${s.type}</span>
+          </div>
+          <div class="tag-stats">
+            VPIP <span class="v">${s.vpip_pct}%</span>
+            PFR <span class="v">${s.pfr_pct}%</span>
+            AGG <span class="v">${s.agg_factor}</span>
+            <span style="color:#888">(${s.hands}h)</span>
+          </div>
         `;
 
-        container.appendChild(tag);
-      });
+        hud.appendChild(tag);
+      }
     }
 
-    function escapeHtml(t) {
-      const d = document.createElement('div');
-      d.textContent = t || '';
-      return d.innerHTML;
-    }
-
-    ipcRenderer.on('hud-update', (e, data) => renderHud(data));
+    ipcRenderer.on('hud-update', (e, data) => render(data));
   </script>
 </body>
 </html>

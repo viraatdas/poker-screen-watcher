@@ -21,6 +21,8 @@ let isCapturing = false;
 let captureInterval = null;
 let lastScreenshot = null; // compressed jpeg base64
 let analysisInFlight = false;
+let lastBoard = ''; // track board to detect new cards / new hand
+let lastAnalysis = null;
 
 // --- Player Stats ---
 const statsPath = path.join(__dirname, 'player_stats.json');
@@ -37,19 +39,33 @@ function saveStats() {
   fs.writeFileSync(statsPath, JSON.stringify(playerStats, null, 2));
 }
 
-function updatePlayerStats(players) {
+// Only call this when a NEW HAND is detected (board changes to empty/preflop)
+function updatePlayerStatsNewHand(players) {
   if (!players || !Array.isArray(players)) return;
   for (const p of players) {
     const name = (p.name || '').trim();
     if (!name || name === 'Unknown' || name === 'Hero') continue;
     if (!playerStats[name]) {
-      playerStats[name] = { hands_seen: 0, vpip: 0, pfr: 0, aggression_actions: 0, passive_actions: 0, showdowns: 0, notes: [], first_seen: new Date().toISOString(), last_seen: new Date().toISOString() };
+      playerStats[name] = { hands_seen: 0, vpip: 0, pfr: 0, aggression_actions: 0, passive_actions: 0, notes: [], first_seen: new Date().toISOString(), last_seen: new Date().toISOString() };
     }
     const s = playerStats[name];
     s.last_seen = new Date().toISOString();
     s.hands_seen++;
     if (p.vpip) s.vpip++;
     if (p.pfr) s.pfr++;
+  }
+  saveStats();
+}
+
+// Call on every capture to track actions (doesn't inflate hand count)
+function updatePlayerActions(players) {
+  if (!players || !Array.isArray(players)) return;
+  for (const p of players) {
+    const name = (p.name || '').trim();
+    if (!name || name === 'Unknown' || name === 'Hero') continue;
+    if (!playerStats[name]) continue; // only track known players
+    const s = playerStats[name];
+    s.last_seen = new Date().toISOString();
     if (p.action === 'bet' || p.action === 'raise') s.aggression_actions++;
     if (p.action === 'call' || p.action === 'check') s.passive_actions++;
     if (p.note && !s.notes.includes(p.note)) { s.notes.push(p.note); if (s.notes.length > 15) s.notes.shift(); }
@@ -100,27 +116,48 @@ function categorizePlayer(s) {
 }
 
 // --- Prompts (kept short for speed) ---
-const ANALYSIS_PROMPT = `Poker coach. Analyze this screenshot. Respond ONLY with JSON, no markdown fences.
-{"s":"situation 1-2 sentences","a":"FOLD/CHECK/CALL/BET X/RAISE X","w":"why 1 sentence","c":"HIGH/MED/LOW","st":"PRE/FLOP/TURN/RIVER","pot":"pot size","hero":"hole cards","board":"board cards","p":[{"n":"name","act":"bet/raise/call/check/fold/none","v":true,"r":false}]}
+function buildAnalysisPrompt() {
+  let statsCtx = '';
+  if (Object.keys(playerStats).length > 0) {
+    const relevant = {};
+    for (const name of currentTablePlayers) {
+      if (playerStats[name]) {
+        const s = playerStats[name], h = s.hands_seen || 1;
+        relevant[name] = `${categorizePlayer(s)} VPIP:${Math.round((s.vpip/h)*100)}% PFR:${Math.round((s.pfr/h)*100)}%`;
+      }
+    }
+    if (Object.keys(relevant).length > 0) {
+      statsCtx = '\nKnown players: ' + Object.entries(relevant).map(([n,v]) => `${n}=${v}`).join(', ') + '. Factor these tendencies into your advice.';
+    }
+  }
+
+  return `Poker coach. Analyze this screenshot. Respond ONLY with JSON, no markdown fences.${statsCtx}
+{"s":"situation 1-2 sentences","a":"FOLD/CHECK/CALL/BET X/RAISE X","w":"why 1 sentence referencing player tendencies if known","c":"HIGH/MED/LOW","st":"PRE/FLOP/TURN/RIVER","pot":"pot size","hero":"hole cards","board":"board cards","p":[{"n":"name","act":"bet/raise/call/check/fold/none","v":true,"r":false,"x":0.5,"y":0.3}]}
+For each player in "p", set "x" and "y" to their screen position as a fraction 0-1 (where 0,0 is top-left and 1,1 is bottom-right). Estimate based on where their name/avatar appears in the screenshot.
 If not poker: {"s":"No poker table","a":"WAIT","w":"","c":"LOW","st":"","pot":"","hero":"","board":"","p":[]}`;
+}
 
 const CHAT_PROMPT = `Expert poker coach, live chat. Be concise (<100 words). Reference the screenshot and player stats if provided. Discuss strategy, ranges, odds, reads.`;
 
 function initGemini(apiKey) {
   genAI = new GoogleGenerativeAI(apiKey);
+  // Fastest available vision model
   model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
   chatModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
   chatSession = null;
 }
 
+// Disable thinking for flash-lite to get raw speed
+const ANALYSIS_CONFIG = { maxOutputTokens: 350, temperature: 0, thinkingConfig: { thinkingBudget: 0 } };
+
 // --- Screenshot: capture, resize, compress to JPEG ---
 async function captureScreen() {
   try {
     const imgBuffer = await screenshot({ format: 'png' });
-    // Resize to 1280px wide and compress to JPEG quality 70
+    // Resize to 1024px wide, JPEG quality 60 for fast upload
     const compressed = await sharp(imgBuffer)
-      .resize(1280, null, { withoutEnlargement: true })
-      .jpeg({ quality: 70 })
+      .resize(1024, null, { withoutEnlargement: true })
+      .jpeg({ quality: 60 })
       .toBuffer();
     lastScreenshot = compressed.toString('base64');
     return lastScreenshot;
@@ -135,10 +172,10 @@ async function analyzeScreenshot(base64Image, apiKey) {
   try {
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [
-        { text: ANALYSIS_PROMPT },
+        { text: buildAnalysisPrompt() },
         { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
       ]}],
-      generationConfig: { maxOutputTokens: 300, temperature: 0.1 },
+      generationConfig: ANALYSIS_CONFIG,
     });
 
     const text = result.response.text().trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
@@ -164,16 +201,44 @@ async function analyzeScreenshot(base64Image, apiKey) {
         vpip: pl.v ?? pl.vpip ?? false,
         pfr: pl.r ?? pl.pfr ?? false,
         note: pl.note || null,
+        x: pl.x ?? null,
+        y: pl.y ?? null,
       })),
     };
+
+    // Detect board change (new card dealt or new hand)
+    const newBoard = (out.board || '').trim();
+    const boardChanged = newBoard !== lastBoard;
+    if (boardChanged) {
+      out._boardChanged = true;
+      const isNewHand = !newBoard || newBoard.split(',').length <= 3 && lastBoard.split(',').length >= 4;
+      lastBoard = newBoard;
+      chatSession = null; // reset chat for new context
+    }
 
     if (out.players.length > 0) {
       const tc = detectTableChange(out.players);
       if (tc.changed) out._tableChange = tc;
-      updatePlayerStats(out.players);
-      out._playerStats = getStatsForPlayers(out.players.map(p => p.name).filter(Boolean));
+
+      // Only count hands_seen/vpip/pfr on new hands, not every screenshot
+      if (boardChanged) {
+        updatePlayerStatsNewHand(out.players);
+      }
+      // Always track actions
+      updatePlayerActions(out.players);
+
+      const names = out.players.map(p => p.name).filter(Boolean);
+      out._playerStats = getStatsForPlayers(names);
+      // Attach coordinates
+      for (const p of out.players) {
+        if (p.name && p.x != null && p.y != null && out._playerStats[p.name]) {
+          out._playerStats[p.name].x = p.x;
+          out._playerStats[p.name].y = p.y;
+        }
+      }
     }
 
+    lastAnalysis = out;
     return out;
   } catch (err) {
     console.error('Gemini API error:', err);
@@ -185,12 +250,18 @@ async function chatWithAI(messages, apiKey) {
   if (!chatModel) initGemini(apiKey);
   try {
     if (!chatSession) {
-      let statsCtx = '';
+      let sysText = CHAT_PROMPT;
       if (currentTablePlayers.length > 0) {
         const stats = getStatsForPlayers(currentTablePlayers);
-        if (Object.keys(stats).length > 0) statsCtx = '\nPlayer stats: ' + JSON.stringify(stats);
+        if (Object.keys(stats).length > 0) sysText += '\nPlayer stats: ' + JSON.stringify(stats);
       }
-      chatSession = chatModel.startChat({ history: [], systemInstruction: CHAT_PROMPT + statsCtx });
+      if (lastAnalysis) {
+        sysText += `\nCurrent hand: Hero has ${lastAnalysis.hero_cards || '?'}, board is ${lastAnalysis.board || 'none'}, pot ${lastAnalysis.pot_size || '?'}, street ${lastAnalysis.street || '?'}. Last advice was: ${lastAnalysis.action} - ${lastAnalysis.why}`;
+      }
+      chatSession = chatModel.startChat({
+        history: [],
+        systemInstruction: { role: 'user', parts: [{ text: sysText }] },
+      });
     }
     const latest = messages[messages.length - 1];
     const parts = [];
@@ -263,22 +334,30 @@ function getApiKey() {
   return process.env.GEMINI_API_KEY || '';
 }
 
-// --- Auto capture loop ---
-async function doCapture(apiKey) {
+// --- Auto capture loop (non-blocking) ---
+function doCapture(apiKey) {
   if (analysisInFlight) return; // skip if previous still running
   analysisInFlight = true;
-  try {
-    overlayWindow.webContents.send('overlay-status', 'analyzing');
-    const img = await captureScreen();
-    if (!img) return;
-    mainWindow.webContents.send('screenshot-taken', img);
-    const analysis = await analyzeScreenshot(img, apiKey);
-    overlayWindow.webContents.send('overlay-update', analysis);
-    hudWindow.webContents.send('hud-update', analysis);
-    mainWindow.webContents.send('analysis-result', analysis);
-  } finally {
-    analysisInFlight = false;
-  }
+
+  overlayWindow.webContents.send('overlay-status', 'analyzing');
+
+  // Fire and forget -- don't await, so the interval keeps ticking
+  (async () => {
+    try {
+      const img = await captureScreen();
+      if (!img) return;
+      mainWindow.webContents.send('screenshot-taken', img);
+      const analysis = await analyzeScreenshot(img, apiKey);
+      analysis._timestamp = new Date().toLocaleTimeString();
+      overlayWindow.webContents.send('overlay-update', analysis);
+      hudWindow.webContents.send('hud-update', analysis);
+      mainWindow.webContents.send('analysis-result', analysis);
+    } catch (err) {
+      console.error('Capture error:', err);
+    } finally {
+      analysisInFlight = false;
+    }
+  })();
 }
 
 // --- IPC ---
@@ -286,10 +365,10 @@ ipcMain.handle('capture-and-analyze', async (e, apiKey) => {
   await doCapture(apiKey);
 });
 
-ipcMain.handle('start-auto-capture', async (e, apiKey, sec) => {
+ipcMain.handle('start-auto-capture', (e, apiKey, sec) => {
   if (isCapturing) return;
   isCapturing = true;
-  await doCapture(apiKey);
+  doCapture(apiKey);
   captureInterval = setInterval(() => doCapture(apiKey), sec * 1000);
 });
 
@@ -345,8 +424,8 @@ app.whenReady().then(() => {
   if (apiKey) {
     setTimeout(async () => {
       isCapturing = true;
-      await doCapture(apiKey);
-      captureInterval = setInterval(() => doCapture(apiKey), 10000);
+      doCapture(apiKey);
+      captureInterval = setInterval(() => doCapture(apiKey), 5000);
       mainWindow.webContents.send('auto-started');
     }, 1500);
   }

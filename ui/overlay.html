@@ -141,7 +141,7 @@
         <span class="hdr-logo">&#9824; Coach</span>
         <span class="hdr-pill wait" id="pill">Waiting</span>
       </div>
-      <span class="hdr-hint">Cmd+\ hide</span>
+      <span class="hdr-hint" id="ts">Cmd+\ hide</span>
     </div>
 
     <div class="action" id="actionBox">
@@ -194,26 +194,31 @@
     ipcRenderer.on('overlay-update', (e, d) => {
       document.getElementById('pill').className = 'hdr-pill live';
       document.getElementById('pill').textContent = 'Live';
+      document.getElementById('ts').textContent = d._timestamp || '';
 
       const at = document.getElementById('actionText');
       at.className = 'action-text ' + acls(d.action);
       at.textContent = d.action || 'N/A';
 
-      // Info line
+      // Info line: hand | board | pot | street
       const parts = [];
-      if (d.hero_cards) parts.push(`<strong>${esc(d.hero_cards)}</strong>`);
-      if (d.board) parts.push(esc(d.board));
+      if (d.hero_cards) parts.push(`Hand: <strong>${esc(d.hero_cards)}</strong>`);
+      if (d.board) parts.push(`Board: <strong>${esc(d.board)}</strong>`);
       if (d.pot_size) parts.push(`Pot: <strong>${esc(d.pot_size)}</strong>`);
-      if (d.street) parts.push(esc(d.street));
-      if (d.confidence) parts.push(d.confidence);
+      if (d.street) parts.push(`<strong>${esc(d.street)}</strong>`);
       document.getElementById('actionInfo').innerHTML = parts.join(' &middot; ');
 
-      // Situation
+      // Situation + why
       const sb = document.getElementById('situBox');
       if (d.situation && d.action !== 'WAIT') {
         sb.style.display = '';
-        sb.innerHTML = esc(d.situation) + (d.why ? ` <span class="why">${esc(d.why)}</span>` : '');
+        sb.innerHTML = esc(d.situation) + (d.why ? `<br><span class="why">${esc(d.why)}</span>` : '');
       } else { sb.style.display = 'none'; }
+
+      // New street / new hand indicator
+      if (d._boardChanged) {
+        addMsg('s', `--- ${d.street || 'NEW HAND'} --- ${d.board || 'cards dealt'}`);
+      }
 
       // Table change
       const ta = document.getElementById('tableAlert');
