@@ -1,13 +1,25 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, desktopCapturer, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const Anthropic = require('@anthropic-ai/sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const screenshot = require('screenshot-desktop');
+
+// Load .env file
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const match = line.match(/^([^#=]+)=(.*)$/);
+    if (match) process.env[match[1].trim()] = match[2].trim();
+  }
+}
 
 let mainWindow;
 let overlayWindow;
 let tray;
-let anthropic;
+let genAI;
+let model;
+let chatSession;
 let isCapturing = false;
 let captureInterval = null;
 let lastScreenshot = null;
@@ -39,6 +51,12 @@ WHY: [reasoning]
 
 If you cannot clearly read the cards or game state, say what you can see and give the best advice possible with available information.`;
 
+function initGemini(apiKey) {
+  genAI = new GoogleGenerativeAI(apiKey);
+  model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  chatSession = null;
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 480,
@@ -65,7 +83,7 @@ function createMainWindow() {
 
 function createOverlayWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
+  const { width } = primaryDisplay.workAreaSize;
 
   overlayWindow = new BrowserWindow({
     width: 380,
@@ -85,13 +103,12 @@ function createOverlayWindow() {
     focusable: false,
   });
 
-  overlayWindow.setIgnoresMouseEvents(true, { forward: true });
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   overlayWindow.loadFile('ui/overlay.html');
   overlayWindow.setVisibleOnAllWorkspaces(true);
 }
 
 function createTray() {
-  // Create a simple tray icon (16x16 template image)
   const icon = nativeImage.createFromBuffer(
     Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAADlJREFUOI1jYBhsgJGBgYGBgYEhm4GBIRuXHBMDA8N/BgaG/wwMDP8ZGBj+48qjG4BsACMjNkUDCgAALRkEBnOixCsAAAAASUVORK5CYII=',
@@ -102,18 +119,12 @@ function createTray() {
   tray = new Tray(icon);
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: 'Show Window',
-      click: () => mainWindow.show(),
-    },
+    { label: 'Show Window', click: () => mainWindow.show() },
     {
       label: 'Toggle Overlay',
       click: () => {
-        if (overlayWindow.isVisible()) {
-          overlayWindow.hide();
-        } else {
-          overlayWindow.show();
-        }
+        if (overlayWindow.isVisible()) overlayWindow.hide();
+        else overlayWindow.show();
       },
     },
     { type: 'separator' },
@@ -143,79 +154,57 @@ async function captureScreen() {
 }
 
 async function analyzeScreenshot(base64Image, apiKey) {
-  if (!anthropic) {
-    anthropic = new Anthropic({ apiKey });
-  }
+  if (!model) initGemini(apiKey);
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      system: POKER_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/png',
-                data: base64Image,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analyze this poker screenshot and give me strategic advice.',
-            },
-          ],
+    const result = await model.generateContent([
+      POKER_SYSTEM_PROMPT + '\n\nAnalyze this poker screenshot and give me strategic advice.',
+      {
+        inlineData: {
+          mimeType: 'image/png',
+          data: base64Image,
         },
-      ],
-    });
+      },
+    ]);
 
-    return response.content[0].text;
+    return result.response.text();
   } catch (err) {
-    console.error('API error:', err);
+    console.error('Gemini API error:', err);
     return `Error: ${err.message}`;
   }
 }
 
 async function chatWithAI(messages, apiKey) {
-  if (!anthropic) {
-    anthropic = new Anthropic({ apiKey });
-  }
+  if (!model) initGemini(apiKey);
 
   try {
-    // Build message array, attaching the last screenshot to the latest user message if available
-    const apiMessages = messages.map((msg, i) => {
-      if (msg.role === 'user' && i === messages.length - 1 && lastScreenshot) {
-        return {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/png',
-                data: lastScreenshot,
-              },
-            },
-            { type: 'text', text: msg.content },
-          ],
-        };
-      }
-      return { role: msg.role, content: msg.content };
-    });
+    // Start a new chat session if needed
+    if (!chatSession) {
+      chatSession = model.startChat({
+        history: [],
+        systemInstruction: POKER_SYSTEM_PROMPT + '\n\nYou are now in chat mode. The player may ask follow-up questions about strategy, hand ranges, odds, or general poker theory. If a screenshot is attached, reference the current game state. Be conversational but still concise.',
+      });
+    }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      system: POKER_SYSTEM_PROMPT + '\n\nYou are now in chat mode. The player may ask follow-up questions about strategy, hand ranges, odds, or general poker theory. If a screenshot is attached, reference the current game state. Be conversational but still concise.',
-      messages: apiMessages,
-    });
+    const latestMsg = messages[messages.length - 1];
 
-    return response.content[0].text;
+    // Build content parts for the latest message
+    const parts = [];
+    if (lastScreenshot) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: lastScreenshot,
+        },
+      });
+    }
+    parts.push(latestMsg.content);
+
+    const result = await chatSession.sendMessage(parts);
+    return result.response.text();
   } catch (err) {
+    // Reset chat session on error
+    chatSession = null;
     return `Error: ${err.message}`;
   }
 }
@@ -228,7 +217,7 @@ ipcMain.handle('capture-and-analyze', async (event, apiKey) => {
   const img = await captureScreen();
   if (!img) return 'Failed to capture screen';
 
-  mainWindow.webContents.send('status', 'Analyzing with AI...');
+  mainWindow.webContents.send('status', 'Analyzing with Gemini...');
   mainWindow.webContents.send('screenshot-taken', img);
 
   const analysis = await analyzeScreenshot(img, apiKey);
@@ -277,24 +266,13 @@ ipcMain.handle('chat', async (event, messages, apiKey) => {
 });
 
 ipcMain.handle('toggle-overlay', () => {
-  if (overlayWindow.isVisible()) {
-    overlayWindow.hide();
-  } else {
-    overlayWindow.show();
-  }
+  if (overlayWindow.isVisible()) overlayWindow.hide();
+  else overlayWindow.show();
 });
 
 ipcMain.handle('set-overlay-interactive', (event, interactive) => {
-  overlayWindow.setIgnoresMouseEvents(!interactive, { forward: true });
-  if (interactive) {
-    overlayWindow.setFocusable(true);
-  } else {
-    overlayWindow.setFocusable(false);
-  }
-});
-
-ipcMain.handle('move-overlay', (event, x, y) => {
-  overlayWindow.setPosition(x, y);
+  overlayWindow.setIgnoreMouseEvents(!interactive, { forward: true });
+  overlayWindow.setFocusable(interactive);
 });
 
 ipcMain.handle('save-api-key', (event, apiKey) => {
@@ -303,13 +281,13 @@ ipcMain.handle('save-api-key', (event, apiKey) => {
 });
 
 ipcMain.handle('load-api-key', () => {
+  // First check config file, then env
   const configPath = path.join(app.getPath('userData'), 'config.json');
   try {
     const data = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    return data.apiKey || '';
-  } catch {
-    return '';
-  }
+    if (data.apiKey) return data.apiKey;
+  } catch {}
+  return process.env.GEMINI_API_KEY || '';
 });
 
 app.whenReady().then(() => {
