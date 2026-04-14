@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Poker Screen Watcher</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: #1a1a2e;
+      color: #e0e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #16213e, #1a1a2e);
+      border-bottom: 1px solid rgba(100, 200, 255, 0.1);
+      -webkit-app-region: drag;
+    }
+
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header .subtitle {
+      font-size: 11px;
+      color: rgba(100, 200, 255, 0.5);
+      margin-top: 2px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: #16213e;
+      border-bottom: 1px solid rgba(100, 200, 255, 0.1);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: rgba(255, 255, 255, 0.8); }
+    .tab.active {
+      color: #64c8ff;
+      border-bottom-color: #64c8ff;
+    }
+
+    /* Tab Content */
+    .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .tab-content.active { display: flex; }
+
+    /* Setup Tab */
+    .setup-panel {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(100, 200, 255, 0.6);
+      margin-bottom: 6px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 200, 255, 0.15);
+      border-radius: 8px;
+      color: #e0e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: rgba(100, 200, 255, 0.4);
+    }
+
+    .field input[type="password"] { font-family: monospace; letter-spacing: 2px; }
+
+    /* Controls */
+    .controls {
+      padding: 20px;
+      border-top: 1px solid rgba(100, 200, 255, 0.1);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: white;
+    }
+    .btn-primary:hover { background: linear-gradient(135deg, #27ae60, #219a52); }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+    }
+    .btn-danger:hover { background: linear-gradient(135deg, #c0392b, #a93226); }
+
+    .btn-secondary {
+      background: rgba(100, 200, 255, 0.1);
+      color: #64c8ff;
+      border: 1px solid rgba(100, 200, 255, 0.2);
+    }
+    .btn-secondary:hover { background: rgba(100, 200, 255, 0.2); }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .status-bar {
+      font-size: 11px;
+      color: rgba(100, 200, 255, 0.5);
+      text-align: center;
+      padding: 6px;
+    }
+
+    /* Capture Tab */
+    .capture-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .screenshot-preview {
+      flex: 0 0 180px;
+      margin: 12px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(100, 200, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screenshot-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .screenshot-preview .placeholder {
+      font-size: 12px;
+      color: rgba(100, 200, 255, 0.3);
+    }
+
+    .analysis-output {
+      flex: 1;
+      margin: 0 12px 12px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(100, 200, 255, 0.1);
+      border-radius: 8px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    /* Chat Tab */
+    .chat-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .chat-msg {
+      margin-bottom: 12px;
+      max-width: 90%;
+    }
+
+    .chat-msg.user {
+      margin-left: auto;
+    }
+
+    .chat-msg .bubble {
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .chat-msg.user .bubble {
+      background: rgba(100, 200, 255, 0.15);
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-msg.assistant .bubble {
+      background: rgba(46, 204, 113, 0.1);
+      border: 1px solid rgba(46, 204, 113, 0.15);
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg .sender {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      border-top: 1px solid rgba(100, 200, 255, 0.1);
+    }
+
+    .chat-input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(100, 200, 255, 0.15);
+      border-radius: 20px;
+      color: #e0e8f0;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-input-row input:focus {
+      border-color: rgba(100, 200, 255, 0.4);
+    }
+
+    .chat-input-row button {
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #64c8ff, #3498db);
+      border: none;
+      border-radius: 20px;
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .chat-context-note {
+      font-size: 10px;
+      color: rgba(100, 200, 255, 0.3);
+      text-align: center;
+      padding: 4px;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 200, 255, 0.2); border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Poker Screen Watcher</h1>
+    <div class="subtitle">AI-powered poker coach overlay</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="setup">Setup</div>
+    <div class="tab" data-tab="capture">Capture</div>
+    <div class="tab" data-tab="chat">Chat</div>
+  </div>
+
+  <!-- Setup Tab -->
+  <div class="tab-content active" id="tab-setup">
+    <div class="setup-panel">
+      <div class="field">
+        <label>Anthropic API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-...">
+      </div>
+      <div class="field">
+        <label>Auto-capture interval (seconds)</label>
+        <input type="number" id="interval" value="30" min="10" max="300">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="saveKey()">Save Key</button>
+        <button class="btn btn-secondary" onclick="toggleOverlay()">Toggle Overlay</button>
+      </div>
+      <div style="margin-top: 16px; padding: 12px; background: rgba(100,200,255,0.05); border-radius: 8px; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.6);">
+        <strong style="color: #64c8ff;">Quick Start:</strong><br>
+        1. Paste your Anthropic API key above<br>
+        2. Open your poker client<br>
+        3. Press <kbd style="background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.2); border-radius: 3px; padding: 1px 5px;">Cmd+Shift+P</kbd> to capture & analyze<br>
+        4. Or use Auto Capture for hands-free mode<br>
+        5. Use the Chat tab to discuss strategy
+      </div>
+    </div>
+  </div>
+
+  <!-- Capture Tab -->
+  <div class="tab-content" id="tab-capture">
+    <div class="capture-panel">
+      <div class="screenshot-preview" id="previewContainer">
+        <span class="placeholder">No screenshot yet</span>
+      </div>
+      <div class="analysis-output" id="analysisOutput">Analysis will appear here...</div>
+      <div class="controls">
+        <div class="btn-row">
+          <button class="btn btn-primary" id="captureBtn" onclick="captureOnce()">Capture Now</button>
+          <button class="btn btn-secondary" id="autoBtn" onclick="toggleAutoCapture()">Start Auto</button>
+        </div>
+        <div class="status-bar" id="statusBar">Ready</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Tab -->
+  <div class="tab-content" id="tab-chat">
+    <div class="chat-panel">
+      <div class="chat-context-note">Chat includes your latest screenshot for context</div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="Ask about strategy, odds, ranges..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    let autoCapturing = false;
+    let chatHistory = [];
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // Load saved API key
+    (async () => {
+      const key = await ipcRenderer.invoke('load-api-key');
+      if (key) document.getElementById('apiKey').value = key;
+    })();
+
+    function getApiKey() {
+      return document.getElementById('apiKey').value.trim();
+    }
+
+    async function saveKey() {
+      const key = getApiKey();
+      if (!key) return;
+      await ipcRenderer.invoke('save-api-key', key);
+      document.getElementById('statusBar').textContent = 'API key saved';
+    }
+
+    async function toggleOverlay() {
+      await ipcRenderer.invoke('toggle-overlay');
+    }
+
+    async function captureOnce() {
+      const key = getApiKey();
+      if (!key) {
+        alert('Please enter your API key first');
+        return;
+      }
+      document.getElementById('captureBtn').disabled = true;
+      await ipcRenderer.invoke('capture-and-analyze', key);
+      document.getElementById('captureBtn').disabled = false;
+    }
+
+    async function toggleAutoCapture() {
+      const key = getApiKey();
+      if (!key) {
+        alert('Please enter your API key first');
+        return;
+      }
+
+      if (autoCapturing) {
+        await ipcRenderer.invoke('stop-auto-capture');
+        autoCapturing = false;
+        document.getElementById('autoBtn').textContent = 'Start Auto';
+        document.getElementById('autoBtn').className = 'btn btn-secondary';
+      } else {
+        const interval = parseInt(document.getElementById('interval').value) || 30;
+        await ipcRenderer.invoke('start-auto-capture', key, interval);
+        autoCapturing = true;
+        document.getElementById('autoBtn').textContent = 'Stop Auto';
+        document.getElementById('autoBtn').className = 'btn btn-danger';
+      }
+    }
+
+    async function sendChat() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const key = getApiKey();
+      if (!key) {
+        alert('Please enter your API key first');
+        return;
+      }
+
+      input.value = '';
+      chatHistory.push({ role: 'user', content: text });
+      renderChat();
+
+      const reply = await ipcRenderer.invoke('chat', chatHistory, key);
+      chatHistory.push({ role: 'assistant', content: reply });
+      renderChat();
+    }
+
+    function renderChat() {
+      const container = document.getElementById('chatMessages');
+      container.innerHTML = chatHistory.map(msg => `
+        <div class="chat-msg ${msg.role}">
+          <div class="sender">${msg.role === 'user' ? 'You' : 'Coach'}</div>
+          <div class="bubble">${escapeHtml(msg.content)}</div>
+        </div>
+      `).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // IPC listeners
+    ipcRenderer.on('status', (event, status) => {
+      document.getElementById('statusBar').textContent = status;
+    });
+
+    ipcRenderer.on('screenshot-taken', (event, base64) => {
+      const container = document.getElementById('previewContainer');
+      container.innerHTML = `<img src="data:image/png;base64,${base64}">`;
+    });
+
+    ipcRenderer.on('analysis-result', (event, text) => {
+      document.getElementById('analysisOutput').textContent = text;
+    });
+
+    // Global shortcut trigger
+    ipcRenderer.on('trigger-capture', () => {
+      captureOnce();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      overflow: hidden;
+      -webkit-app-region: no-drag;
+    }
+
+    #overlay {
+      background: rgba(10, 10, 30, 0.88);
+      border: 1px solid rgba(100, 200, 255, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      color: #e0e8f0;
+      font-size: 13px;
+      line-height: 1.5;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      max-height: 100vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    #overlay::-webkit-scrollbar { width: 4px; }
+    #overlay::-webkit-scrollbar-track { background: transparent; }
+    #overlay::-webkit-scrollbar-thumb { background: rgba(100, 200, 255, 0.3); border-radius: 2px; }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(100, 200, 255, 0.15);
+    }
+
+    .header-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(100, 200, 255, 0.7);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2ecc71;
+      box-shadow: 0 0 6px rgba(46, 204, 113, 0.5);
+    }
+
+    .status-dot.analyzing {
+      background: #f39c12;
+      box-shadow: 0 0 6px rgba(243, 156, 18, 0.5);
+      animation: pulse 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .situation { color: #a8c8e8; margin-bottom: 8px; }
+    .action {
+      color: #2ecc71;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+    .why { color: #8899aa; font-size: 12px; font-style: italic; }
+
+    .waiting {
+      color: rgba(100, 200, 255, 0.5);
+      text-align: center;
+      padding: 20px 0;
+      font-size: 12px;
+    }
+
+    .shortcut {
+      font-size: 10px;
+      color: rgba(100, 200, 255, 0.3);
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    kbd {
+      background: rgba(100, 200, 255, 0.1);
+      border: 1px solid rgba(100, 200, 255, 0.2);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      font-family: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <div class="header">
+      <span class="header-title">Poker Advisor</span>
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+    <div id="content">
+      <div class="waiting">
+        Waiting for capture...<br>
+        <span class="shortcut"><kbd>Cmd+Shift+P</kbd> to analyze</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('overlay-update', (event, text) => {
+      const dot = document.getElementById('statusDot');
+      dot.classList.remove('analyzing');
+
+      const content = document.getElementById('content');
+
+      // Parse the structured response
+      const lines = text.split('\n');
+      let situation = '', action = '', why = '', raw = '';
+
+      for (const line of lines) {
+        if (line.startsWith('SITUATION:')) {
+          situation = line.replace('SITUATION:', '').trim();
+        } else if (line.startsWith('ACTION:')) {
+          action = line.replace('ACTION:', '').trim();
+        } else if (line.startsWith('WHY:')) {
+          why = line.replace('WHY:', '').trim();
+        } else {
+          raw += line + '\n';
+        }
+      }
+
+      if (action) {
+        content.innerHTML = `
+          <div class="situation">${situation}</div>
+          <div class="action">${action}</div>
+          <div class="why">${why}</div>
+        `;
+      } else {
+        // Fallback for unstructured responses
+        content.innerHTML = `<div class="situation">${text.replace(/\n/g, '<br>')}</div>`;
+      }
+    });
+
+    ipcRenderer.on('overlay-status', (event, status) => {
+      const dot = document.getElementById('statusDot');
+      if (status === 'Analyzing...') {
+        dot.classList.add('analyzing');
+      } else {
+        dot.classList.remove('analyzing');
+      }
+    });
+  </script>
+</body>
+</html>

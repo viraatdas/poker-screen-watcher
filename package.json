@@ -1,0 +1,19 @@
+{
+  "name": "poekr-screen-watcher",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "electron": "^41.2.0",
+    "screenshot-desktop": "^1.15.3"
+  }
+}
