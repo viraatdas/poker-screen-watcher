@@ -6,360 +6,598 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    :root {
+      --bg: #0f0f1a;
+      --bg2: #161625;
+      --bg3: #1e1e32;
+      --accent: #6c5ce7;
+      --accent2: #a29bfe;
+      --green: #00b894;
+      --red: #ff6b6b;
+      --yellow: #feca57;
+      --blue: #74b9ff;
+      --text: #e8e8f0;
+      --text2: rgba(255,255,255,0.55);
+      --text3: rgba(255,255,255,0.25);
+      --border: rgba(108, 92, 231, 0.15);
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      background: #1a1a2e;
-      color: #e0e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
-    /* Header */
-    .header {
-      padding: 16px 20px;
-      background: linear-gradient(135deg, #16213e, #1a1a2e);
-      border-bottom: 1px solid rgba(100, 200, 255, 0.1);
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
       -webkit-app-region: drag;
     }
 
-    .header h1 {
-      font-size: 16px;
-      font-weight: 600;
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .topbar-logo {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent2);
       letter-spacing: 0.5px;
     }
 
-    .header .subtitle {
-      font-size: 11px;
-      color: rgba(100, 200, 255, 0.5);
-      margin-top: 2px;
+    .topbar-status {
+      font-size: 10px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    /* Tabs */
-    .tabs {
+    .topbar-status.ready { background: rgba(0, 184, 148, 0.15); color: var(--green); }
+    .topbar-status.capturing { background: rgba(254, 202, 87, 0.15); color: var(--yellow); animation: pulse 1s infinite; }
+    .topbar-status.auto { background: rgba(108, 92, 231, 0.15); color: var(--accent2); }
+    .topbar-status.stopped { background: rgba(255,255,255,0.06); color: var(--text3); }
+
+    @keyframes pulse { 50% { opacity: 0.5; } }
+
+    .topbar-actions {
       display: flex;
-      background: #16213e;
-      border-bottom: 1px solid rgba(100, 200, 255, 0.1);
+      gap: 6px;
+      -webkit-app-region: no-drag;
     }
 
-    .tab {
-      flex: 1;
-      padding: 10px;
-      text-align: center;
-      font-size: 12px;
-      font-weight: 500;
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text2);
+      font-size: 14px;
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      color: rgba(255, 255, 255, 0.5);
-      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
     }
 
-    .tab:hover { color: rgba(255, 255, 255, 0.8); }
-    .tab.active {
-      color: #64c8ff;
-      border-bottom-color: #64c8ff;
+    .icon-btn:hover { background: rgba(108, 92, 231, 0.15); color: var(--accent2); border-color: rgba(108, 92, 231, 0.3); }
+
+    /* Nav */
+    .nav {
+      display: flex;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
     }
 
-    /* Tab Content */
-    .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
-    .tab-content.active { display: flex; }
-
-    /* Setup Tab */
-    .setup-panel {
-      padding: 20px;
-      overflow-y: auto;
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
-
-    .field label {
-      display: block;
+    .nav-item {
+      flex: 1;
+      padding: 10px 0;
+      text-align: center;
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: rgba(100, 200, 255, 0.6);
-      margin-bottom: 6px;
-    }
-
-    .field input, .field select {
-      width: 100%;
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(100, 200, 255, 0.15);
-      border-radius: 8px;
-      color: #e0e8f0;
-      font-size: 13px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .field input:focus, .field select:focus {
-      border-color: rgba(100, 200, 255, 0.4);
-    }
-
-    .field input[type="password"] { font-family: monospace; letter-spacing: 2px; }
-
-    /* Controls */
-    .controls {
-      padding: 20px;
-      border-top: 1px solid rgba(100, 200, 255, 0.1);
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .btn {
-      flex: 1;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
+      letter-spacing: 1.2px;
+      color: var(--text3);
       cursor: pointer;
-      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #2ecc71, #27ae60);
-      color: white;
-    }
-    .btn-primary:hover { background: linear-gradient(135deg, #27ae60, #219a52); }
+    .nav-item:hover { color: var(--text2); }
+    .nav-item.active { color: var(--accent2); border-bottom-color: var(--accent); }
 
-    .btn-danger {
-      background: linear-gradient(135deg, #e74c3c, #c0392b);
-      color: white;
-    }
-    .btn-danger:hover { background: linear-gradient(135deg, #c0392b, #a93226); }
+    /* Panels */
+    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .panel.active { display: flex; }
 
-    .btn-secondary {
-      background: rgba(100, 200, 255, 0.1);
-      color: #64c8ff;
-      border: 1px solid rgba(100, 200, 255, 0.2);
-    }
-    .btn-secondary:hover { background: rgba(100, 200, 255, 0.2); }
-
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    .status-bar {
-      font-size: 11px;
-      color: rgba(100, 200, 255, 0.5);
-      text-align: center;
-      padding: 6px;
-    }
-
-    /* Capture Tab */
-    .capture-panel {
+    /* ============ LIVE PANEL ============ */
+    .live-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
+    }
+
+    .capture-controls {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cap-btn {
+      flex: 1;
+      padding: 10px 0;
+      border: none;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.15s;
+    }
+
+    .cap-btn.primary { background: var(--accent); color: white; }
+    .cap-btn.primary:hover { background: #5b4bd5; }
+    .cap-btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .cap-btn.auto-start { background: rgba(0, 184, 148, 0.15); color: var(--green); border: 1px solid rgba(0, 184, 148, 0.3); }
+    .cap-btn.auto-start:hover { background: rgba(0, 184, 148, 0.25); }
+    .cap-btn.auto-stop { background: rgba(255, 107, 107, 0.15); color: var(--red); border: 1px solid rgba(255, 107, 107, 0.3); }
+    .cap-btn.auto-stop:hover { background: rgba(255, 107, 107, 0.25); }
+
+    /* Live analysis card */
+    .analysis-card {
+      margin: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
       overflow: hidden;
     }
 
-    .screenshot-preview {
-      flex: 0 0 180px;
-      margin: 12px;
-      border-radius: 8px;
+    .analysis-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(108, 92, 231, 0.06);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .analysis-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent2);
+    }
+
+    .analysis-card-body {
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text2);
+      white-space: pre-wrap;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .big-action {
+      text-align: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .big-action-text {
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .big-action-text.fold { color: var(--red); }
+    .big-action-text.check { color: var(--blue); }
+    .big-action-text.call { color: var(--yellow); }
+    .big-action-text.bet, .big-action-text.raise { color: var(--green); }
+
+    .screenshot-thumb {
+      height: 100px;
+      margin: 12px 16px;
+      border-radius: 10px;
       overflow: hidden;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(100, 200, 255, 0.1);
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .screenshot-preview img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+    .screenshot-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .screenshot-thumb .ph { font-size: 11px; color: var(--text3); }
 
-    .screenshot-preview .placeholder {
-      font-size: 12px;
-      color: rgba(100, 200, 255, 0.3);
-    }
+    /* ============ CHAT PANEL ============ */
+    .chat-panel { flex: 1; display: flex; flex-direction: column; }
 
-    .analysis-output {
+    .chat-messages {
       flex: 1;
-      margin: 0 12px 12px;
-      padding: 12px;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(100, 200, 255, 0.1);
-      border-radius: 8px;
       overflow-y: auto;
+      padding: 16px;
+    }
+
+    .chat-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text3);
+    }
+
+    .chat-empty .big { font-size: 28px; margin-bottom: 10px; }
+    .chat-empty .title { font-size: 14px; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
+    .chat-empty .hint { font-size: 12px; line-height: 1.6; }
+
+    .chat-msg { margin-bottom: 14px; max-width: 88%; }
+    .chat-msg.user { margin-left: auto; }
+
+    .chat-msg .sender {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 3px;
+      color: var(--text3);
+      font-weight: 600;
+    }
+
+    .chat-msg .bubble {
+      padding: 10px 14px;
+      border-radius: 14px;
       font-size: 13px;
       line-height: 1.6;
       white-space: pre-wrap;
     }
 
-    /* Chat Tab */
-    .chat-panel {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px;
-    }
-
-    .chat-msg {
-      margin-bottom: 12px;
-      max-width: 90%;
-    }
-
-    .chat-msg.user {
-      margin-left: auto;
-    }
-
-    .chat-msg .bubble {
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
-
     .chat-msg.user .bubble {
-      background: rgba(100, 200, 255, 0.15);
-      border: 1px solid rgba(100, 200, 255, 0.2);
+      background: rgba(108, 92, 231, 0.15);
+      border: 1px solid rgba(108, 92, 231, 0.25);
       border-bottom-right-radius: 4px;
+      color: var(--text);
     }
 
     .chat-msg.assistant .bubble {
-      background: rgba(46, 204, 113, 0.1);
-      border: 1px solid rgba(46, 204, 113, 0.15);
+      background: var(--bg3);
+      border: 1px solid var(--border);
       border-bottom-left-radius: 4px;
+      color: var(--text);
     }
 
-    .chat-msg .sender {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-      color: rgba(255, 255, 255, 0.4);
+    .chat-input-area {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      background: var(--bg2);
     }
 
-    .chat-input-row {
+    .chat-context {
+      font-size: 9px;
+      color: var(--text3);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .chat-row {
       display: flex;
       gap: 8px;
-      padding: 12px;
-      border-top: 1px solid rgba(100, 200, 255, 0.1);
     }
 
-    .chat-input-row input {
+    .chat-row input {
       flex: 1;
+      padding: 11px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .chat-row input:focus { border-color: var(--accent); }
+    .chat-row input::placeholder { color: var(--text3); }
+
+    .chat-send {
+      padding: 0 18px;
+      background: var(--accent);
+      border: none;
+      border-radius: 24px;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .chat-send:hover { background: #5b4bd5; }
+
+    /* ============ STATS PANEL ============ */
+    .stats-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .stats-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+
+    .stats-clear {
+      font-size: 10px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      background: transparent;
+      color: var(--red);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .stats-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text3);
+      font-size: 13px;
+    }
+
+    .player-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+
+    .player-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .player-name { font-size: 14px; font-weight: 700; color: var(--text); }
+
+    .player-type-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .player-type-badge.LAG { background: rgba(255, 107, 107, 0.15); color: var(--red); }
+    .player-type-badge.TAG { background: rgba(0, 184, 148, 0.15); color: var(--green); }
+    .player-type-badge.Nit { background: rgba(116, 185, 255, 0.15); color: var(--blue); }
+    .player-type-badge.Loose { background: rgba(254, 202, 87, 0.15); color: var(--yellow); }
+    .player-type-badge.Regular { background: rgba(108, 92, 231, 0.15); color: var(--accent2); }
+    .player-type-badge.Unknown { background: rgba(255,255,255,0.06); color: var(--text3); }
+
+    .player-stats-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 6px;
+    }
+
+    .player-stat {
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    .player-stat strong { color: var(--text); font-size: 13px; }
+
+    .player-notes {
+      font-size: 11px;
+      color: var(--text3);
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    /* ============ SETTINGS PANEL ============ */
+    .settings-panel {
+      padding: 20px 16px;
+      overflow-y: auto;
+    }
+
+    .setting-group {
+      margin-bottom: 20px;
+    }
+
+    .setting-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text3);
+      margin-bottom: 6px;
+    }
+
+    .setting-input {
+      width: 100%;
       padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(100, 200, 255, 0.15);
-      border-radius: 20px;
-      color: #e0e8f0;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
       font-size: 13px;
       outline: none;
     }
 
-    .chat-input-row input:focus {
-      border-color: rgba(100, 200, 255, 0.4);
+    .setting-input:focus { border-color: var(--accent); }
+    .setting-input[type="password"] { font-family: monospace; letter-spacing: 2px; }
+
+    .setting-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
     }
 
-    .chat-input-row button {
-      padding: 10px 16px;
-      background: linear-gradient(135deg, #64c8ff, #3498db);
-      border: none;
-      border-radius: 20px;
-      color: white;
+    .setting-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text2);
+      font-size: 12px;
       font-weight: 600;
-      font-size: 13px;
       cursor: pointer;
+      transition: all 0.15s;
     }
 
-    .chat-context-note {
-      font-size: 10px;
-      color: rgba(100, 200, 255, 0.3);
-      text-align: center;
-      padding: 4px;
+    .setting-btn:hover { background: rgba(108, 92, 231, 0.1); color: var(--accent2); border-color: rgba(108, 92, 231, 0.3); }
+
+    .shortcuts-info {
+      margin-top: 20px;
+      padding: 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 2;
+      color: var(--text2);
+    }
+
+    .shortcuts-info kbd {
+      background: rgba(108, 92, 231, 0.1);
+      border: 1px solid rgba(108, 92, 231, 0.2);
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      color: var(--accent2);
     }
 
     /* Scrollbars */
     ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(100, 200, 255, 0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(108, 92, 231, 0.2); border-radius: 3px; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Poker Screen Watcher</h1>
-    <div class="subtitle">AI-powered poker coach overlay</div>
-  </div>
-
-  <div class="tabs">
-    <div class="tab active" data-tab="setup">Setup</div>
-    <div class="tab" data-tab="capture">Capture</div>
-    <div class="tab" data-tab="chat">Chat</div>
-  </div>
-
-  <!-- Setup Tab -->
-  <div class="tab-content active" id="tab-setup">
-    <div class="setup-panel">
-      <div class="field">
-        <label>Gemini API Key</label>
-        <input type="password" id="apiKey" value="AIzaSyBvbKXALdCN8d6kX6NoIvfrGmGgpR_xHI4">
-      </div>
-      <div class="field">
-        <label>Auto-capture interval (seconds)</label>
-        <input type="number" id="interval" value="10" min="5" max="300">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-secondary" onclick="saveKey()">Save Key</button>
-        <button class="btn btn-secondary" onclick="toggleOverlay()">Toggle Overlay</button>
-      </div>
-      <div style="margin-top: 16px; padding: 12px; background: rgba(100,200,255,0.05); border-radius: 8px; font-size: 12px; line-height: 1.6; color: rgba(255,255,255,0.6);">
-        <strong style="color: #64c8ff;">Quick Start:</strong><br>
-        1. Paste your Anthropic API key above<br>
-        2. Open your poker client<br>
-        3. Press <kbd style="background: rgba(100,200,255,0.1); border: 1px solid rgba(100,200,255,0.2); border-radius: 3px; padding: 1px 5px;">Cmd+Shift+P</kbd> to capture & analyze<br>
-        4. Or use Auto Capture for hands-free mode<br>
-        5. Use the Chat tab to discuss strategy
-      </div>
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">&#9824; Poker Watcher</span>
+      <span class="topbar-status ready" id="statusBadge">Ready</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="toggleOverlay()" title="Toggle overlay (Cmd+\)">&#9633;</button>
     </div>
   </div>
 
-  <!-- Capture Tab -->
-  <div class="tab-content" id="tab-capture">
-    <div class="capture-panel">
-      <div class="screenshot-preview" id="previewContainer">
-        <span class="placeholder">No screenshot yet</span>
+  <!-- Nav -->
+  <div class="nav">
+    <div class="nav-item active" data-panel="live">Live</div>
+    <div class="nav-item" data-panel="chat">Chat</div>
+    <div class="nav-item" data-panel="stats">Players</div>
+    <div class="nav-item" data-panel="settings">Settings</div>
+  </div>
+
+  <!-- ====== LIVE ====== -->
+  <div class="panel active" id="panel-live">
+    <div class="live-panel">
+      <div class="capture-controls">
+        <button class="cap-btn primary" id="captureBtn" onclick="captureOnce()">Capture Now</button>
+        <button class="cap-btn auto-start" id="autoBtn" onclick="toggleAutoCapture()">Auto: Off</button>
       </div>
-      <div class="analysis-output" id="analysisOutput">Analysis will appear here...</div>
-      <div class="controls">
-        <div class="btn-row">
-          <button class="btn btn-primary" id="captureBtn" onclick="captureOnce()">Capture Now</button>
-          <button class="btn btn-secondary" id="autoBtn" onclick="toggleAutoCapture()">Start Auto</button>
+
+      <div class="screenshot-thumb" id="previewContainer">
+        <span class="ph">No screenshot yet</span>
+      </div>
+
+      <div class="analysis-card" id="analysisCard" style="display: none;">
+        <div class="big-action" id="bigAction"></div>
+        <div class="analysis-card-header">
+          <span class="analysis-card-title">Analysis</span>
+          <span id="analysisStreet" class="analysis-card-title" style="color: var(--yellow);"></span>
         </div>
-        <div class="status-bar" id="statusBar">Ready</div>
+        <div class="analysis-card-body" id="analysisBody">Waiting for capture...</div>
       </div>
     </div>
   </div>
 
-  <!-- Chat Tab -->
-  <div class="tab-content" id="tab-chat">
+  <!-- ====== CHAT ====== -->
+  <div class="panel" id="panel-chat">
     <div class="chat-panel">
-      <div class="chat-context-note">Chat includes your latest screenshot for context</div>
-      <div class="chat-messages" id="chatMessages"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chatInput" placeholder="Ask about strategy, odds, ranges..." onkeydown="if(event.key==='Enter')sendChat()">
-        <button onclick="sendChat()">Send</button>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty">
+          <div class="big">&#128172;</div>
+          <div class="title">Talk to your poker coach</div>
+          <div class="hint">
+            Ask about hand ranges, pot odds, player reads,<br>
+            or strategy for the current hand.<br><br>
+            Your latest screenshot is always included for context.
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div class="chat-context" id="chatContext">Screenshot context will be included</div>
+        <div class="chat-row">
+          <input type="text" id="chatInput" placeholder="Should I 3-bet here? What's my equity?" onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== STATS ====== -->
+  <div class="panel" id="panel-stats">
+    <div class="stats-panel">
+      <div class="stats-header">
+        <span class="stats-title">Player Tracker</span>
+        <button class="stats-clear" onclick="clearStats()">Clear All</button>
+      </div>
+      <div id="statsContainer">
+        <div class="stats-empty">No players tracked yet. Start capturing to build stats.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== SETTINGS ====== -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-panel">
+      <div class="setting-group">
+        <label class="setting-label">Gemini API Key</label>
+        <input type="password" class="setting-input" id="apiKey" value="AIzaSyBvbKXALdCN8d6kX6NoIvfrGmGgpR_xHI4">
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Auto-capture interval (seconds)</label>
+        <input type="number" class="setting-input" id="interval" value="10" min="5" max="300">
+      </div>
+      <div class="setting-row">
+        <button class="setting-btn" onclick="saveKey()">Save Key</button>
+        <button class="setting-btn" onclick="toggleOverlay()">Toggle Overlay</button>
+      </div>
+
+      <div class="shortcuts-info">
+        <strong>Keyboard Shortcuts</strong><br>
+        <kbd>Cmd+Shift+P</kbd> Capture & analyze<br>
+        <kbd>Cmd+\</kbd> Show/hide overlay
       </div>
     </div>
   </div>
@@ -370,43 +608,38 @@
     let autoCapturing = false;
     let chatHistory = [];
 
-    // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    // --- Nav ---
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        item.classList.add('active');
+        document.getElementById(`panel-${item.dataset.panel}`).classList.add('active');
+        if (item.dataset.panel === 'stats') refreshStats();
       });
     });
 
-    // Load saved API key
+    // --- Load key ---
     (async () => {
       const key = await ipcRenderer.invoke('load-api-key');
       if (key) document.getElementById('apiKey').value = key;
     })();
 
-    function getApiKey() {
-      return document.getElementById('apiKey').value.trim();
-    }
+    function getApiKey() { return document.getElementById('apiKey').value.trim(); }
 
     async function saveKey() {
       const key = getApiKey();
-      if (!key) return;
-      await ipcRenderer.invoke('save-api-key', key);
-      document.getElementById('statusBar').textContent = 'API key saved';
+      if (key) await ipcRenderer.invoke('save-api-key', key);
     }
 
     async function toggleOverlay() {
       await ipcRenderer.invoke('toggle-overlay');
     }
 
+    // --- Capture ---
     async function captureOnce() {
       const key = getApiKey();
-      if (!key) {
-        alert('Please enter your API key first');
-        return;
-      }
+      if (!key) { alert('Set your Gemini API key in Settings'); return; }
       document.getElementById('captureBtn').disabled = true;
       await ipcRenderer.invoke('capture-and-analyze', key);
       document.getElementById('captureBtn').disabled = false;
@@ -414,47 +647,107 @@
 
     async function toggleAutoCapture() {
       const key = getApiKey();
-      if (!key) {
-        alert('Please enter your API key first');
-        return;
-      }
+      if (!key) { alert('Set your Gemini API key in Settings'); return; }
 
       if (autoCapturing) {
         await ipcRenderer.invoke('stop-auto-capture');
         autoCapturing = false;
-        document.getElementById('autoBtn').textContent = 'Start Auto';
-        document.getElementById('autoBtn').className = 'btn btn-secondary';
+        const btn = document.getElementById('autoBtn');
+        btn.textContent = 'Auto: Off';
+        btn.className = 'cap-btn auto-start';
       } else {
-        const interval = parseInt(document.getElementById('interval').value) || 30;
+        const interval = parseInt(document.getElementById('interval').value) || 10;
         await ipcRenderer.invoke('start-auto-capture', key, interval);
         autoCapturing = true;
-        document.getElementById('autoBtn').textContent = 'Stop Auto';
-        document.getElementById('autoBtn').className = 'btn btn-danger';
+        const btn = document.getElementById('autoBtn');
+        btn.textContent = 'Auto: On';
+        btn.className = 'cap-btn auto-stop';
       }
     }
 
+    // --- Analysis display ---
+    function getActionClass(action) {
+      if (!action) return '';
+      const a = action.toUpperCase();
+      if (a.includes('FOLD')) return 'fold';
+      if (a.includes('CHECK')) return 'check';
+      if (a.includes('CALL')) return 'call';
+      if (a.includes('RAISE')) return 'raise';
+      if (a.includes('BET')) return 'bet';
+      return '';
+    }
+
+    function showAnalysis(data) {
+      const card = document.getElementById('analysisCard');
+      card.style.display = '';
+
+      const bigAction = document.getElementById('bigAction');
+      const cls = getActionClass(data.action);
+      bigAction.innerHTML = `<div class="big-action-text ${cls}">${escapeHtml(data.action || 'Analyzing...')}</div>`;
+
+      document.getElementById('analysisStreet').textContent = data.street || '';
+
+      let body = '';
+      if (data.hero_cards) body += `Hand: ${data.hero_cards}\n`;
+      if (data.board) body += `Board: ${data.board}\n`;
+      if (data.pot_size) body += `Pot: ${data.pot_size}\n`;
+      if (body) body += '\n';
+      body += data.situation || '';
+      if (data.why) body += '\n\n' + data.why;
+
+      if (data._tableChange) {
+        if (data._tableChange.type === 'new_table') body += '\n\n--- NEW TABLE DETECTED ---';
+        else if (data._tableChange.joined?.length || data._tableChange.left?.length) {
+          body += '\n\nTable changed:';
+          if (data._tableChange.joined?.length) body += ' Joined: ' + data._tableChange.joined.join(', ');
+          if (data._tableChange.left?.length) body += ' Left: ' + data._tableChange.left.join(', ');
+        }
+      }
+
+      document.getElementById('analysisBody').textContent = body;
+    }
+
+    // --- Chat ---
     async function sendChat() {
       const input = document.getElementById('chatInput');
       const text = input.value.trim();
       if (!text) return;
 
       const key = getApiKey();
-      if (!key) {
-        alert('Please enter your API key first');
-        return;
-      }
+      if (!key) { alert('Set your Gemini API key in Settings'); return; }
 
       input.value = '';
       chatHistory.push({ role: 'user', content: text });
       renderChat();
 
+      // Show typing indicator
+      const container = document.getElementById('chatMessages');
+      const typing = document.createElement('div');
+      typing.className = 'chat-msg assistant';
+      typing.id = 'typing';
+      typing.innerHTML = '<div class="sender">Coach</div><div class="bubble" style="color: var(--text3)">Thinking...</div>';
+      container.appendChild(typing);
+      container.scrollTop = container.scrollHeight;
+
       const reply = await ipcRenderer.invoke('chat', chatHistory, key);
+      document.getElementById('typing')?.remove();
+
       chatHistory.push({ role: 'assistant', content: reply });
       renderChat();
     }
 
     function renderChat() {
       const container = document.getElementById('chatMessages');
+      if (chatHistory.length === 0) {
+        container.innerHTML = `
+          <div class="chat-empty">
+            <div class="big">&#128172;</div>
+            <div class="title">Talk to your poker coach</div>
+            <div class="hint">Ask about hand ranges, pot odds, player reads, or strategy.</div>
+          </div>
+        `;
+        return;
+      }
       container.innerHTML = chatHistory.map(msg => `
         <div class="chat-msg ${msg.role}">
           <div class="sender">${msg.role === 'user' ? 'You' : 'Coach'}</div>
@@ -464,30 +757,92 @@
       container.scrollTop = container.scrollHeight;
     }
 
+    // --- Stats ---
+    async function refreshStats() {
+      const stats = await ipcRenderer.invoke('get-all-stats');
+      const container = document.getElementById('statsContainer');
+
+      const entries = Object.entries(stats || {});
+      if (entries.length === 0) {
+        container.innerHTML = '<div class="stats-empty">No players tracked yet. Start capturing to build stats.</div>';
+        return;
+      }
+
+      // Sort by last seen
+      entries.sort((a, b) => new Date(b[1].last_seen) - new Date(a[1].last_seen));
+
+      container.innerHTML = entries.map(([name, s]) => {
+        const hands = s.hands_seen || 1;
+        const vpip = Math.round((s.vpip / hands) * 100);
+        const pfr = Math.round((s.pfr / hands) * 100);
+        const agg = s.passive_actions > 0 ? (s.aggression_actions / s.passive_actions).toFixed(1) : (s.aggression_actions > 0 ? 'INF' : '0');
+        const type = categorize(s);
+        const typeClass = type.replace(' ', '');
+
+        return `
+          <div class="player-card">
+            <div class="player-card-top">
+              <span class="player-name">${escapeHtml(name)}</span>
+              <span class="player-type-badge ${typeClass}">${type}</span>
+            </div>
+            <div class="player-stats-row">
+              <span class="player-stat">VPIP <strong>${vpip}%</strong></span>
+              <span class="player-stat">PFR <strong>${pfr}%</strong></span>
+              <span class="player-stat">AGG <strong>${agg}</strong></span>
+              <span class="player-stat">Hands <strong>${s.hands_seen}</strong></span>
+            </div>
+            ${s.notes && s.notes.length > 0 ? `<div class="player-notes">${s.notes.slice(-3).map(n => escapeHtml(n)).join(' | ')}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function categorize(s) {
+      const hands = s.hands_seen || 1;
+      if (hands < 5) return 'Unknown';
+      const vpip = (s.vpip / hands) * 100;
+      const pfr = (s.pfr / hands) * 100;
+      if (vpip > 40 && pfr > 20) return 'LAG';
+      if (vpip > 40) return 'Loose';
+      if (vpip < 20 && pfr > 15) return 'TAG';
+      if (vpip < 20) return 'Nit';
+      return 'Regular';
+    }
+
+    async function clearStats() {
+      if (confirm('Clear all tracked player stats?')) {
+        await ipcRenderer.invoke('clear-stats');
+        refreshStats();
+      }
+    }
+
+    // --- Util ---
     function escapeHtml(text) {
       const div = document.createElement('div');
-      div.textContent = text;
+      div.textContent = text || '';
       return div.innerHTML;
     }
 
-    // IPC listeners
-    ipcRenderer.on('status', (event, status) => {
-      document.getElementById('statusBar').textContent = status;
-    });
+    function setStatus(status) {
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'topbar-status ' + status;
+      const labels = { ready: 'Ready', capturing: 'Capturing...', auto: 'Auto', stopped: 'Stopped' };
+      badge.textContent = labels[status] || status;
+    }
+
+    // --- IPC ---
+    ipcRenderer.on('status', (event, status) => setStatus(status));
 
     ipcRenderer.on('screenshot-taken', (event, base64) => {
-      const container = document.getElementById('previewContainer');
-      container.innerHTML = `<img src="data:image/png;base64,${base64}">`;
+      document.getElementById('previewContainer').innerHTML = `<img src="data:image/png;base64,${base64}">`;
+      document.getElementById('chatContext').textContent = 'Latest screenshot attached to messages';
     });
 
-    ipcRenderer.on('analysis-result', (event, text) => {
-      document.getElementById('analysisOutput').textContent = text;
+    ipcRenderer.on('analysis-result', (event, data) => {
+      showAnalysis(data);
     });
 
-    // Global shortcut trigger
-    ipcRenderer.on('trigger-capture', () => {
-      captureOnce();
-    });
+    ipcRenderer.on('trigger-capture', () => captureOnce());
   </script>
 </body>
 </html>

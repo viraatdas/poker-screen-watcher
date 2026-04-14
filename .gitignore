@@ -3,4 +3,5 @@ dist/
 .DS_Store
 config.json
 .env
+player_stats.json
 *.log
