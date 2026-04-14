@@ -7,350 +7,254 @@
 
     body {
       background: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      -webkit-app-region: no-drag;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
     }
 
     #overlay {
-      background: rgba(8, 8, 24, 0.92);
-      border: 2px solid rgba(100, 200, 255, 0.35);
+      background: rgba(10, 10, 22, 0.95);
+      border: 1px solid rgba(120, 100, 255, 0.25);
       border-radius: 14px;
-      padding: 0;
-      color: #e0e8f0;
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(100, 200, 255, 0.08);
+      color: #e8eaf0;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
       overflow: hidden;
     }
 
-    /* Top bar with status */
-    .top-bar {
+    /* Draggable header */
+    .hdr {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      align-items: center;
-      padding: 8px 14px;
-      background: rgba(100, 200, 255, 0.06);
-      border-bottom: 1px solid rgba(100, 200, 255, 0.12);
+      padding: 7px 12px;
+      background: rgba(120, 100, 255, 0.06);
+      border-bottom: 1px solid rgba(120, 100, 255, 0.1);
+      -webkit-app-region: drag;
     }
 
-    .top-bar-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .hdr-left { display: flex; align-items: center; gap: 6px; }
+    .hdr-logo { font-size: 12px; font-weight: 700; color: #a29bfe; }
+    .hdr-pill {
+      font-size: 8px; font-weight: 700; padding: 1px 7px; border-radius: 8px;
+      text-transform: uppercase; letter-spacing: 0.4px;
     }
+    .hdr-pill.live { background: rgba(0,180,140,0.2); color: #00b894; }
+    .hdr-pill.wait { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); }
+    .hdr-pill.busy { background: rgba(255,200,50,0.2); color: #feca57; animation: pulse 0.6s infinite; }
+    @keyframes pulse { 50% { opacity: 0.4; } }
+    .hdr-hint { font-size: 8px; color: rgba(255,255,255,0.15); -webkit-app-region: no-drag; }
 
-    .logo {
-      font-size: 10px;
+    /* Big action */
+    .action {
+      padding: 10px 14px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(120,100,255,0.08);
+    }
+    .action-label { font-size: 8px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.2); }
+    .action-text { font-size: 28px; font-weight: 900; margin: 2px 0; }
+    .action-text.fold { color: #ff6b6b; }
+    .action-text.check { color: #74b9ff; }
+    .action-text.call { color: #feca57; }
+    .action-text.bet, .action-text.raise { color: #00b894; }
+    .action-text.wait { color: rgba(255,255,255,0.15); font-size: 13px; font-weight: 500; }
+
+    .action-info {
+      font-size: 9px; color: rgba(255,255,255,0.3);
+      display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+    }
+    .action-info strong { color: rgba(255,255,255,0.55); }
+
+    /* Situation line */
+    .situ {
+      padding: 6px 14px;
+      font-size: 11px;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.5);
+      border-bottom: 1px solid rgba(120,100,255,0.06);
+    }
+    .situ .why { color: rgba(255,255,255,0.3); font-style: italic; }
+
+    /* Table alert */
+    .talert {
+      padding: 4px 14px;
+      background: rgba(155,89,182,0.1);
+      font-size: 8px;
+      color: #bb8fce;
+      text-align: center;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: rgba(100, 200, 255, 0.6);
-    }
-
-    .status-pill {
-      font-size: 9px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 10px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .status-pill.ready { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
-    .status-pill.analyzing {
-      background: rgba(243, 156, 18, 0.2);
-      color: #f39c12;
-      animation: blink 0.8s ease-in-out infinite;
-    }
-    .status-pill.waiting { background: rgba(100, 200, 255, 0.1); color: rgba(100, 200, 255, 0.5); }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    /* Chat */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
     }
 
-    .street-badge {
-      font-size: 9px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 10px;
-      text-transform: uppercase;
-      background: rgba(155, 89, 182, 0.2);
-      color: #bb8fce;
+    .chat::-webkit-scrollbar { width: 3px; }
+    .chat::-webkit-scrollbar-thumb { background: rgba(120,100,255,0.15); border-radius: 2px; }
+
+    .m { margin-bottom: 8px; max-width: 92%; }
+    .m.u { margin-left: auto; }
+    .m .who { font-size: 7px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.2); margin-bottom: 1px; font-weight: 700; }
+    .m .b {
+      padding: 7px 11px; border-radius: 11px;
+      font-size: 12px; line-height: 1.5; white-space: pre-wrap;
     }
+    .m.u .b { background: rgba(120,100,255,0.15); border: 1px solid rgba(120,100,255,0.2); border-bottom-right-radius: 3px; }
+    .m.a .b { background: rgba(0,180,140,0.08); border: 1px solid rgba(0,180,140,0.1); border-bottom-left-radius: 3px; }
+    .m.s .b { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); color: rgba(255,255,255,0.35); font-size: 10px; text-align: center; }
 
-    /* The big action box */
-    .action-box {
-      padding: 14px 16px;
-      text-align: center;
+    .typing { font-size: 10px; color: rgba(255,255,255,0.2); font-style: italic; padding: 4px 0; }
+
+    /* Input */
+    .inp {
+      padding: 8px 12px;
+      border-top: 1px solid rgba(120,100,255,0.1);
+      background: rgba(120,100,255,0.03);
+      display: flex; gap: 6px;
     }
-
-    .action-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.35);
-      margin-bottom: 4px;
+    .inp input {
+      flex: 1; padding: 8px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(120,100,255,0.15);
+      border-radius: 18px; color: #e8eaf0; font-size: 12px; outline: none;
     }
-
-    .action-text {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      line-height: 1.2;
+    .inp input:focus { border-color: rgba(120,100,255,0.4); }
+    .inp input::placeholder { color: rgba(255,255,255,0.15); }
+    .inp button {
+      padding: 0 12px; background: rgba(120,100,255,0.7); border: none;
+      border-radius: 18px; color: white; font-weight: 700; font-size: 12px; cursor: pointer;
     }
-
-    .action-text.fold { color: #e74c3c; }
-    .action-text.check { color: #3498db; }
-    .action-text.call { color: #f39c12; }
-    .action-text.bet, .action-text.raise { color: #2ecc71; }
-    .action-text.waiting { color: rgba(100, 200, 255, 0.3); font-size: 16px; }
-    .action-text.error { color: #e74c3c; font-size: 14px; }
-
-    .confidence {
-      display: inline-block;
-      margin-top: 4px;
-      font-size: 9px;
-      font-weight: 600;
-      padding: 1px 8px;
-      border-radius: 8px;
-      text-transform: uppercase;
-    }
-
-    .confidence.HIGH { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
-    .confidence.MEDIUM { background: rgba(243, 156, 18, 0.15); color: #f39c12; }
-    .confidence.LOW { background: rgba(231, 76, 60, 0.15); color: #e74c3c; }
-
-    /* Details section */
-    .details {
-      padding: 10px 16px 12px;
-      border-top: 1px solid rgba(100, 200, 255, 0.08);
-    }
-
-    .situation-text {
-      font-size: 12px;
-      line-height: 1.5;
-      color: #a8c8e8;
-      margin-bottom: 6px;
-    }
-
-    .why-text {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.4);
-      font-style: italic;
-    }
-
-    /* Player notes bar */
-    .player-bar {
-      padding: 8px 16px 10px;
-      border-top: 1px solid rgba(100, 200, 255, 0.08);
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .player-tag {
-      font-size: 9px;
-      padding: 2px 7px;
-      border-radius: 6px;
-      background: rgba(100, 200, 255, 0.08);
-      border: 1px solid rgba(100, 200, 255, 0.12);
-      color: rgba(255, 255, 255, 0.6);
-      white-space: nowrap;
-    }
-
-    .player-tag .player-type {
-      color: #f39c12;
-      font-weight: 600;
-    }
-
-    /* Table change banner */
-    .table-change {
-      padding: 6px 16px;
-      background: rgba(155, 89, 182, 0.15);
-      border-top: 1px solid rgba(155, 89, 182, 0.2);
-      font-size: 10px;
-      color: #bb8fce;
-      text-align: center;
-      font-weight: 600;
-    }
-
-    /* Game info row */
-    .game-info {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      padding: 4px 16px 0;
-    }
-
-    .game-info-item {
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.35);
-    }
-
-    .game-info-item strong {
-      color: rgba(255, 255, 255, 0.6);
-    }
-
-    /* Waiting state */
-    .waiting-state {
-      padding: 30px 20px;
-      text-align: center;
-    }
-
-    .waiting-state .icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .waiting-state .msg {
-      font-size: 13px;
-      color: rgba(100, 200, 255, 0.5);
-      margin-bottom: 8px;
-    }
-
-    .waiting-state .shortcut {
-      font-size: 11px;
-      color: rgba(100, 200, 255, 0.3);
-    }
-
-    .waiting-state kbd {
-      background: rgba(100, 200, 255, 0.1);
-      border: 1px solid rgba(100, 200, 255, 0.2);
-      border-radius: 4px;
-      padding: 2px 8px;
-      font-family: inherit;
-      font-size: 11px;
-    }
+    .inp button:hover { background: rgba(120,100,255,0.9); }
   </style>
 </head>
 <body>
   <div id="overlay">
-    <div id="content">
-      <div class="waiting-state">
-        <div class="icon">&#9824;</div>
-        <div class="msg">Poker Advisor Ready</div>
-        <div class="shortcut">
-          <kbd>Cmd+Shift+P</kbd> capture &nbsp; <kbd>Cmd+\</kbd> toggle
-        </div>
+    <div class="hdr">
+      <div class="hdr-left">
+        <span class="hdr-logo">&#9824; Coach</span>
+        <span class="hdr-pill wait" id="pill">Waiting</span>
       </div>
+      <span class="hdr-hint">Cmd+\ hide</span>
+    </div>
+
+    <div class="action" id="actionBox">
+      <div class="action-label">You Should</div>
+      <div class="action-text wait" id="actionText">Waiting for capture...</div>
+      <div class="action-info" id="actionInfo"></div>
+    </div>
+
+    <div class="situ" id="situBox" style="display:none;"></div>
+    <div class="talert" id="tableAlert" style="display:none;"></div>
+
+    <div class="chat" id="chat"></div>
+
+    <div class="inp">
+      <input id="ci" placeholder="Ask about this hand..." onkeydown="if(event.key==='Enter')send()">
+      <button onclick="send()">&#9654;</button>
     </div>
   </div>
 
   <script>
     const { ipcRenderer } = require('electron');
+    let msgs = [];
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text || '';
-      return div.innerHTML;
+    function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+
+    function acls(a) {
+      if (!a) return 'wait';
+      const u = a.toUpperCase();
+      if (u.includes('FOLD')) return 'fold';
+      if (u.includes('CHECK')) return 'check';
+      if (u.includes('CALL')) return 'call';
+      if (u.includes('RAISE')) return 'raise';
+      if (u.includes('BET')) return 'bet';
+      return 'wait';
     }
 
-    function getActionClass(action) {
-      if (!action) return 'waiting';
-      const a = action.toUpperCase();
-      if (a.includes('FOLD')) return 'fold';
-      if (a.includes('CHECK')) return 'check';
-      if (a.includes('CALL')) return 'call';
-      if (a.includes('RAISE')) return 'raise';
-      if (a.includes('BET')) return 'bet';
-      if (a.includes('ERROR') || a.includes('WAIT')) return 'waiting';
-      return 'bet';
+    function addMsg(role, text) { msgs.push({ role, text }); renderChat(); }
+
+    function renderChat() {
+      const c = document.getElementById('chat');
+      c.innerHTML = msgs.map(m => {
+        if (m.role === 's') return `<div class="m s"><div class="b">${esc(m.text)}</div></div>`;
+        const cls = m.role === 'u' ? 'u' : 'a';
+        const who = m.role === 'u' ? 'You' : 'Coach';
+        return `<div class="m ${cls}"><div class="who">${who}</div><div class="b">${esc(m.text)}</div></div>`;
+      }).join('');
+      c.scrollTop = c.scrollHeight;
     }
 
-    function renderAnalysis(data) {
-      const content = document.getElementById('content');
+    ipcRenderer.on('overlay-update', (e, d) => {
+      document.getElementById('pill').className = 'hdr-pill live';
+      document.getElementById('pill').textContent = 'Live';
 
-      if (!data || data.action === 'WAITING' || data.action === 'ERROR') {
-        content.innerHTML = `
-          <div class="top-bar">
-            <div class="top-bar-left">
-              <span class="logo">Advisor</span>
-              <span class="status-pill ready">Ready</span>
-            </div>
-          </div>
-          <div class="action-box">
-            <div class="action-label">Status</div>
-            <div class="action-text waiting">${escapeHtml(data?.situation || 'No poker table detected')}</div>
-          </div>
-        `;
-        return;
-      }
+      const at = document.getElementById('actionText');
+      at.className = 'action-text ' + acls(d.action);
+      at.textContent = d.action || 'N/A';
 
-      const actionClass = getActionClass(data.action);
+      // Info line
+      const parts = [];
+      if (d.hero_cards) parts.push(`<strong>${esc(d.hero_cards)}</strong>`);
+      if (d.board) parts.push(esc(d.board));
+      if (d.pot_size) parts.push(`Pot: <strong>${esc(d.pot_size)}</strong>`);
+      if (d.street) parts.push(esc(d.street));
+      if (d.confidence) parts.push(d.confidence);
+      document.getElementById('actionInfo').innerHTML = parts.join(' &middot; ');
 
-      let html = `
-        <div class="top-bar">
-          <div class="top-bar-left">
-            <span class="logo">Advisor</span>
-            <span class="status-pill ready">Live</span>
-          </div>
-          ${data.street && data.street !== 'UNKNOWN' ? `<span class="street-badge">${escapeHtml(data.street)}</span>` : ''}
-        </div>
-      `;
+      // Situation
+      const sb = document.getElementById('situBox');
+      if (d.situation && d.action !== 'WAIT') {
+        sb.style.display = '';
+        sb.innerHTML = esc(d.situation) + (d.why ? ` <span class="why">${esc(d.why)}</span>` : '');
+      } else { sb.style.display = 'none'; }
 
-      // Game info (cards, pot)
-      if (data.hero_cards || data.pot_size) {
-        html += '<div class="game-info">';
-        if (data.hero_cards) html += `<span class="game-info-item">Hand: <strong>${escapeHtml(data.hero_cards)}</strong></span>`;
-        if (data.board) html += `<span class="game-info-item">Board: <strong>${escapeHtml(data.board)}</strong></span>`;
-        if (data.pot_size) html += `<span class="game-info-item">Pot: <strong>${escapeHtml(data.pot_size)}</strong></span>`;
-        html += '</div>';
-      }
-
-      // Big action
-      html += `
-        <div class="action-box">
-          <div class="action-label">You Should</div>
-          <div class="action-text ${actionClass}">${escapeHtml(data.action)}</div>
-          ${data.confidence ? `<span class="confidence ${data.confidence}">${data.confidence} confidence</span>` : ''}
-        </div>
-      `;
-
-      // Situation + Why
-      html += `
-        <div class="details">
-          <div class="situation-text">${escapeHtml(data.situation)}</div>
-          ${data.why ? `<div class="why-text">${escapeHtml(data.why)}</div>` : ''}
-        </div>
-      `;
-
-      // Table change alert
-      if (data._tableChange && data._tableChange.type === 'new_table') {
-        html += `<div class="table-change">NEW TABLE DETECTED</div>`;
-      } else if (data._tableChange && data._tableChange.type === 'players_changed') {
-        const parts = [];
-        if (data._tableChange.joined?.length) parts.push(`+${data._tableChange.joined.join(', ')}`);
-        if (data._tableChange.left?.length) parts.push(`-${data._tableChange.left.join(', ')}`);
-        html += `<div class="table-change">Table changed: ${escapeHtml(parts.join(' | '))}</div>`;
-      }
-
-      // Player stats tags
-      if (data._playerStats && Object.keys(data._playerStats).length > 0) {
-        html += '<div class="player-bar">';
-        for (const [name, stats] of Object.entries(data._playerStats)) {
-          html += `<span class="player-tag">${escapeHtml(name)} <span class="player-type">${stats.type}</span> ${stats.vpip_pct}/${stats.pfr_pct}</span>`;
+      // Table change
+      const ta = document.getElementById('tableAlert');
+      if (d._tableChange) {
+        ta.style.display = '';
+        if (d._tableChange.type === 'new_table') { ta.textContent = 'New table detected'; addMsg('s', 'New table - tracking players'); }
+        else {
+          const p = [];
+          if (d._tableChange.joined?.length) p.push('+' + d._tableChange.joined.join(', '));
+          if (d._tableChange.left?.length) p.push('-' + d._tableChange.left.join(', '));
+          ta.textContent = p.join(' | ');
         }
-        html += '</div>';
-      }
-
-      content.innerHTML = html;
-    }
-
-    ipcRenderer.on('overlay-update', (event, data) => {
-      renderAnalysis(data);
+      } else { ta.style.display = 'none'; }
     });
 
-    ipcRenderer.on('overlay-status', (event, status) => {
-      if (status === 'analyzing') {
-        // Show analyzing state on the top bar without clearing the content
-        const pill = document.querySelector('.status-pill');
-        if (pill) {
-          pill.className = 'status-pill analyzing';
-          pill.textContent = 'Analyzing...';
-        }
+    ipcRenderer.on('overlay-status', (e, s) => {
+      if (s === 'analyzing') {
+        document.getElementById('pill').className = 'hdr-pill busy';
+        document.getElementById('pill').textContent = 'Reading...';
       }
     });
+
+    ipcRenderer.on('chat-response', (e, text) => {
+      document.querySelector('.typing')?.remove();
+      addMsg('a', text);
+    });
+
+    function send() {
+      const i = document.getElementById('ci');
+      const t = i.value.trim();
+      if (!t) return;
+      i.value = '';
+      addMsg('u', t);
+      const c = document.getElementById('chat');
+      const ty = document.createElement('div');
+      ty.className = 'typing';
+      ty.textContent = 'Thinking...';
+      c.appendChild(ty);
+      c.scrollTop = c.scrollHeight;
+      ipcRenderer.send('overlay-chat', t);
+    }
   </script>
 </body>
 </html>

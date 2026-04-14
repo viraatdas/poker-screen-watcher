@@ -843,6 +843,13 @@
     });
 
     ipcRenderer.on('trigger-capture', () => captureOnce());
+
+    ipcRenderer.on('auto-started', () => {
+      autoCapturing = true;
+      const btn = document.getElementById('autoBtn');
+      btn.textContent = 'Auto: On';
+      btn.className = 'cap-btn auto-stop';
+    });
   </script>
 </body>
 </html>

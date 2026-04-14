@@ -14,6 +14,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "electron": "^41.2.0",
-    "screenshot-desktop": "^1.15.3"
+    "screenshot-desktop": "^1.15.3",
+    "sharp": "^0.34.5"
   }
 }
